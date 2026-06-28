@@ -6,7 +6,7 @@
 
 ## 1. Thread Lifecycle (the 5 states)
 
-*Definition:* A **thread** is a single path of execution inside a program. Its **lifecycle** is the set of states it passes through from creation to finish.
+*Definition:* A **thread** is a single path of execution inside a program — it's like one worker doing one sequence of tasks. A program can run many threads at once to do things in parallel. The **lifecycle** is the set of states a thread moves through from the moment it's created until it finishes.
 
 Real life: A worker — hired (New), ready at desk (Runnable), running a task (Running), waiting for a tool someone else holds (Blocked/Waiting), goes home (Terminated).
 
@@ -33,7 +33,7 @@ New → Runnable → Running → Terminated
 
 ## 2. Runnable vs Callable vs Thread
 
-*Definition:* These are the three ways to define work for a thread. **Thread** is the worker itself; **Runnable** and **Callable** are tasks you hand to a worker.
+*Definition:* These are the three ways to give work to a thread. **Thread** is the worker itself (you extend it). **Runnable** and **Callable** are just *tasks* (a piece of work) that you hand to a worker to run — the difference is that Callable can give back a result and report errors, while Runnable cannot.
 
 | | Thread | Runnable | Callable |
 |--|--------|----------|----------|
@@ -61,7 +61,7 @@ System.out.println(f.get());   // 5
 
 ## 3. ExecutorService & Thread Pools
 
-*Definition:* An **ExecutorService** is a manager that holds a **pool** of reusable threads and runs your tasks on them — so you don't create a new thread for every task (which is slow and memory-heavy).
+*Definition:* An **ExecutorService** is a manager that keeps a ready-made **pool** (group) of reusable threads and runs your tasks on them. Instead of creating a brand-new thread for every task (which is slow and eats memory), you just submit tasks and the manager assigns them to free threads in the pool.
 
 Real life: A taxi company with a fixed fleet of cars, instead of buying a new car for every customer.
 
@@ -89,7 +89,7 @@ pool.shutdown();   // always shut down when done
 ## 4. Future & CompletableFuture
 
 ### Future
-*Definition:* A **Future** is a placeholder for a result that isn't ready yet — you submit a task now and call `get()` later to fetch the result (which blocks until it's done).
+*Definition:* A **Future** is a placeholder (an IOU) for a result that isn't ready yet. You submit a task now, get a Future back immediately, and later call `get()` to collect the actual result — but `get()` makes your thread wait (block) until the task finishes.
 
 ```java
 Future<Integer> f = pool.submit(() -> 10 * 2);
@@ -98,7 +98,7 @@ Integer result = f.get();   // BLOCKS until ready → 20
 Limitation: `get()` blocks, and you can't easily chain steps.
 
 ### CompletableFuture (the modern upgrade)
-*Definition:* A **CompletableFuture** is a Future you can **chain and combine** without blocking — you describe "do this, then that" and it runs in the background.
+*Definition:* A **CompletableFuture** is an upgraded Future you can **chain and combine** without waiting. Instead of calling a blocking `get()`, you describe the steps up front — "do this, then transform it, then use it" — and it runs each step in the background as results become ready.
 
 ```java
 CompletableFuture.supplyAsync(() -> 5)
@@ -122,7 +122,7 @@ CompletableFuture.supplyAsync(() -> 5)
 
 ## 5. `synchronized` keyword (method vs block)
 
-*Definition:* **`synchronized`** puts a lock around code so only **one thread at a time** can run it — preventing two threads from corrupting shared data.
+*Definition:* **`synchronized`** puts a lock around a piece of code so that only **one thread at a time** can run it. Any other thread that wants in must wait its turn until the first one leaves. This stops two threads from changing shared data at the same moment and corrupting it.
 
 Real life: A single toilet with one key — only the person holding the key gets in; others wait.
 
@@ -151,7 +151,7 @@ void deposit(int amt) {
 
 ## 6. `volatile` keyword (visibility)
 
-*Definition:* **`volatile`** tells Java that a variable is shared — always read/write it from **main memory**, not a thread's private cache — so every thread sees the latest value.
+*Definition:* **`volatile`** marks a variable as shared between threads. Normally each thread keeps a private cached copy of a variable for speed, so it can miss updates made by others. `volatile` forces every read and write to go straight to **main memory**, so all threads always see the newest value.
 
 Real life: A shared whiteboard everyone reads from directly, instead of each person keeping a stale photocopy.
 
@@ -170,7 +170,7 @@ void run()  { while (running) {} } // without volatile, may loop forever
 
 ## 7. ReentrantLock vs synchronized
 
-*Definition:* A **ReentrantLock** is a flexible, manual version of `synchronized` — you call `lock()` and `unlock()` yourself, which gives extra powers but also extra responsibility.
+*Definition:* A **ReentrantLock** is a flexible, manual version of `synchronized`. Instead of Java locking and unlocking automatically, *you* call `lock()` to grab it and `unlock()` to release it. This extra control unlocks features `synchronized` can't do (like trying for a lock with a timeout) — but you must remember to unlock, or other threads stay stuck forever.
 
 ```java
 ReentrantLock lock = new ReentrantLock();
@@ -200,7 +200,7 @@ try {
 
 ## 8. Deadlock, Livelock, Starvation
 
-*Definition:* These are three ways threads get **stuck** and stop making progress.
+*Definition:* These are three common threading problems where threads stop getting useful work done. **Deadlock** = everyone frozen waiting on each other; **Livelock** = everyone busy but going nowhere; **Starvation** = one unlucky thread never gets its turn.
 
 | Problem | What happens | Real life |
 |---------|--------------|-----------|
@@ -228,7 +228,7 @@ synchronized (lockA) {
 
 ## 9. Race Conditions
 
-*Definition:* A **race condition** is a bug where the result depends on the **unpredictable timing** of threads — two threads touch shared data at once and corrupt it.
+*Definition:* A **race condition** is a bug where the final result depends on the **unpredictable timing** of threads — they "race" each other. When two threads read and update the same shared data at almost the same moment, one thread's change can overwrite the other's, so updates get silently lost.
 
 ```java
 int count = 0;
@@ -251,7 +251,7 @@ Why: `count++` isn't atomic. Thread A reads 5, Thread B reads 5, both write 6 �
 
 ## 10. Semaphore, CountDownLatch, CyclicBarrier, Phaser
 
-*Definition:* These are **coordination tools** that control how threads wait for each other or for permits.
+*Definition:* These are **coordination tools** (from `java.util.concurrent`) that control how threads wait for each other — for example, limiting how many run at once, or making threads pause until a group is ready before continuing.
 
 | Tool | What it does | Real life |
 |------|--------------|-----------|
@@ -279,7 +279,7 @@ latch.await();   // blocks until count = 0
 
 ## 11. ThreadLocal
 
-*Definition:* A **ThreadLocal** gives each thread its **own private copy** of a variable — so threads never share it and can't corrupt each other's value.
+*Definition:* A **ThreadLocal** gives each thread its **own private copy** of a variable. Even though the code looks like one shared variable, every thread silently gets a separate value — so threads never see or overwrite each other's data, removing the need for locks.
 
 Real life: Everyone gets their own personal notebook; no one writes in yours.
 
@@ -301,10 +301,10 @@ userId.remove();         // clean up to avoid memory leaks
 
 ## 12. Atomic classes (CAS)
 
-*Definition:* **Atomic** classes (like `AtomicInteger`) let you update a value safely from many threads **without locks**, using a CPU trick called **CAS (Compare-And-Swap)**.
+*Definition:* **Atomic** classes (like `AtomicInteger`) let many threads update one value safely **without locks**. They rely on a fast CPU instruction called **CAS (Compare-And-Swap)** that does the check-and-update in one un-interruptible step, so no two threads can clash.
 
 ### What is CAS?
-*Definition:* **CAS** = "if the value is still what I expect, swap it to the new one; otherwise retry." It's one un-interruptible CPU instruction, so no other thread can sneak in.
+*Definition:* **CAS** stands for **Compare-And-Swap**. The rule is: "if the value is still what I expect, swap it to my new value; if someone already changed it, fail and let me try again." Because it's one un-interruptible CPU instruction, no other thread can sneak in halfway.
 
 ```
 CAS(memory, expected, new):
@@ -335,7 +335,7 @@ ref.compareAndSet("a", "b");
 
 ## 13. Fork/Join Framework
 
-*Definition:* The **Fork/Join framework** splits a big task into smaller subtasks (**fork**), runs them in parallel, then combines the results (**join**) — built for divide-and-conquer.
+*Definition:* The **Fork/Join framework** is built for "divide-and-conquer" work. It splits a big task into smaller subtasks (**fork**), runs those subtasks in parallel across CPU cores, and then combines their results back into one answer (**join**).
 
 Real life: To count a huge pile of votes, split it among many people, then add up their counts.
 
@@ -359,7 +359,7 @@ new ForkJoinPool().invoke(new SumTask(...));
 
 ## 14. Virtual Threads (Java 21 — Project Loom)
 
-*Definition:* **Virtual threads** are super-lightweight threads managed by the JVM (not the OS) — you can run **millions** of them cheaply, unlike normal "platform" threads which are heavy and limited.
+*Definition:* **Virtual threads** are super-lightweight threads managed by the JVM itself instead of the operating system. Normal "platform" threads are heavy (each ties up real OS resources), so you can only have a few thousand. Virtual threads are so cheap you can run **millions** at once, making them ideal for handling huge numbers of waiting tasks.
 
 Real life: Old threads = hiring full-time staff (expensive, limited). Virtual threads = tickets in a queue the JVM juggles over a few real workers.
 
